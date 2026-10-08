@@ -74,7 +74,7 @@ func (s *server) handleLookup(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, Run(ctx, res, q))
 }
 
-func (s *server) handleCommands(w http.ResponseWriter, r *http.Request) {
+func (s *server) handleCommands(w http.ResponseWriter, _ *http.Request) {
 	type cmd struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
@@ -101,6 +101,6 @@ func logRequests(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		h.ServeHTTP(w, r)
-		log.Printf("%s %s %s", r.Method, r.URL.RequestURI(), time.Since(start).Round(time.Millisecond))
+		log.Printf("%s %q %s", r.Method, r.URL.RequestURI(), time.Since(start).Round(time.Millisecond)) // #nosec G706 -- URI is %q-quoted, so control chars are escaped
 	})
 }
