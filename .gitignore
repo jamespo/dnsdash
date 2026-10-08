@@ -1,0 +1,16 @@
+# Binaries
+dnsdash
+*.exe
+*.test
+*.out
+
+# Releases
+dist/
+
+# direnv
+.envrc
+
+# Editor files
+.idea/
+.vscode/
+.DS_Store

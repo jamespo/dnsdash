@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DNS Dash</title>
+<style>
+:root {
+  --bg: #f5f7fa; --panel: #fff; --text: #1d2330; --muted: #657084; --border: #dde2ea;
+  --accent: #1f6feb; --accent-text: #fff; --head: #eef2f7;
+  --pass: #1a7f37; --pass-bg: #e6f4ea; --warn: #9a6700; --warn-bg: #fff4d6;
+  --fail: #c62828; --fail-bg: #fdecea; --info: #0b5cad; --info-bg: #e7f0fb;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1218; --panel: #171b23; --text: #e3e7ee; --muted: #8b95a7; --border: #2a3140;
+    --accent: #4c8dff; --head: #1e2430;
+    --pass: #56d17a; --pass-bg: #15301e; --warn: #e3b341; --warn-bg: #352a10;
+    --fail: #ff7b72; --fail-bg: #3b1a1a; --info: #79b8ff; --info-bg: #13263d;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, Segoe UI, sans-serif; }
+header { background: var(--panel); border-bottom: 1px solid var(--border); padding: 20px 16px; }
+.wrap { max-width: 1100px; margin: 0 auto; }
+h1 { margin: 0 0 12px; font-size: 22px; }
+h1 span { color: var(--accent); }
+form { display: flex; gap: 8px; flex-wrap: wrap; }
+input, select, button { font: inherit; padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: var(--text); }
+#q { flex: 1 1 320px; font-family: var(--mono); }
+button { background: var(--accent); color: var(--accent-text); border-color: var(--accent); cursor: pointer; font-weight: 600; }
+button.secondary { background: transparent; color: var(--accent); }
+#custom { width: 170px; font-family: var(--mono); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.chip { font-size: 13px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; font-weight: 500; }
+.chip:hover, .chip.active { border-color: var(--accent); color: var(--accent); }
+main { padding: 16px; }
+.hint { color: var(--muted); font-size: 13px; margin-top: 8px; }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.card-head h2 { margin: 0; font-size: 16px; font-family: var(--mono); word-break: break-all; }
+.meta { color: var(--muted); font-size: 12px; }
+.close { background: none; border: none; color: var(--muted); padding: 0 4px; font-size: 18px; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 8px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { background: var(--head); font-weight: 600; font-size: 13px; }
+td { font-family: var(--mono); white-space: pre-wrap; word-break: break-all; }
+td a { color: var(--accent); text-decoration: none; cursor: pointer; }
+td a:hover { text-decoration: underline; }
+td.LISTED { color: var(--fail); font-weight: 700; }
+td.OK { color: var(--pass); }
+td.Error { color: var(--warn); }
+.checks { padding: 8px 16px 12px; }
+.checks h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 8px 0; }
+.check { display: flex; gap: 10px; align-items: baseline; padding: 4px 0; font-size: 14px; }
+.badge { flex: none; width: 52px; text-align: center; font-size: 11px; font-weight: 700; text-transform: uppercase; border-radius: 4px; padding: 1px 0; }
+.badge.pass { color: var(--pass); background: var(--pass-bg); }
+.badge.warn { color: var(--warn); background: var(--warn-bg); }
+.badge.fail { color: var(--fail); background: var(--fail-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+.check b { font-weight: 600; }
+.error { margin: 12px 16px; padding: 10px 12px; border-radius: 6px; background: var(--fail-bg); color: var(--fail); }
+.foot { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 16px; border-top: 1px solid var(--border); align-items: center; }
+.foot .meta { margin-right: 4px; }
+details summary { cursor: pointer; color: var(--muted); font-size: 13px; padding: 0 16px 10px; }
+pre { margin: 0 16px 12px; padding: 12px; background: var(--bg); border-radius: 6px; overflow-x: auto; font-size: 12px; }
+.empty { color: var(--muted); padding: 12px 16px; }
+.loading { padding: 16px; color: var(--muted); }
+.spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -1px; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>DNS <span>Dash</span></h1>
+    <form id="form">
+      <input id="q" name="q" placeholder="mx:example.com" autocomplete="off" autofocus spellcheck="false">
+      <select id="server" title="DNS resolver">
+        <option value="default">Default resolver</option>
+        <option value="1.1.1.1">Cloudflare 1.1.1.1</option>
+        <option value="8.8.8.8">Google 8.8.8.8</option>
+        <option value="9.9.9.9">Quad9 9.9.9.9</option>
+        <option value="custom">Custom…</option>
+      </select>
+      <input id="custom" placeholder="ip[:port]" hidden>
+      <button type="submit">Lookup</button>
+    </form>
+    <div class="chips" id="chips"></div>
+    <div class="hint" id="hint">Type <code>command:target</code>, or pick a command above. A bare domain runs an MX lookup; a bare IP runs a reverse lookup.</div>
+  </div>
+</header>
+<main><div class="wrap" id="results"></div></main>
+
+<script>
+const $ = s => document.querySelector(s);
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  }
+  for (const k of kids) e.append(k);
+  return e;
+};
+
+let commands = [];
+const ipRe = /^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-f:]+:[0-9a-f:]*$/i;
+const hostRe = /^(?=.{1,253}$)([a-z0-9_]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i;
+
+// Follow-up lookups offered after each result, like MxToolbox's suggestions.
+const related = {
+  mx: ['spf', 'dmarc', 'blacklist', 'ns', 'dns'],
+  a: ['aaaa', 'mx', 'ns', 'dns'],
+  aaaa: ['a', 'dns'],
+  ns: ['soa', 'dnssec', 'dns'],
+  txt: ['spf', 'dmarc'],
+  soa: ['ns', 'dnssec'],
+  spf: ['dmarc', 'mx', 'txt'],
+  dmarc: ['spf', 'mx'],
+  blacklist: ['mx', 'spf'],
+  dnssec: ['ns', 'soa'],
+  dns: ['mx', 'spf', 'dmarc', 'dnssec'],
+  cname: ['a', 'dns'],
+  caa: ['dns'],
+};
+
+async function init() {
+  const r = await fetch('api/commands').then(r => r.json());
+  commands = r.commands;
+  $('#server').options[0].textContent = `Default (${r.defaultResolver})`;
+  if (!r.allowCustom) [...$('#server').options].slice(1).forEach(o => o.remove());
+  for (const c of commands) {
+    $('#chips').append(el('button', {
+      type: 'button', class: 'chip', title: `${c.description}\ne.g. ${c.example}`,
+      onclick: () => pickCommand(c),
+    }, c.name.toUpperCase()));
+  }
+  const params = new URLSearchParams(location.search);
+  if (params.get('server')) setServer(params.get('server'));
+  if (params.get('q')) { $('#q').value = params.get('q'); lookup(params.get('q')); }
+}
+
+function pickCommand(c) {
+  const q = $('#q');
+  const target = q.value.includes(':') && commands.some(x => q.value.toLowerCase().startsWith(x.name + ':'))
+    ? q.value.slice(q.value.indexOf(':') + 1) : q.value;
+  q.value = `${c.name}:${target}`;
+  $('#hint').textContent = `${c.name.toUpperCase()}: ${c.description}. Example: ${c.example}`;
+  q.focus();
+  if (target.trim()) lookup(q.value);
+}
+
+function setServer(v) {
+  const sel = $('#server');
+  if ([...sel.options].some(o => o.value === v)) sel.value = v;
+  else { sel.value = 'custom'; $('#custom').value = v; }
+  $('#custom').hidden = sel.value !== 'custom';
+}
+
+function currentServer() {
+  const v = $('#server').value;
+  return v === 'custom' ? $('#custom').value.trim() || 'default' : v;
+}
+
+$('#server').addEventListener('change', () => {
+  $('#custom').hidden = $('#server').value !== 'custom';
+  if (!$('#custom').hidden) $('#custom').focus();
+});
+
+$('#form').addEventListener('submit', e => {
+  e.preventDefault();
+  const q = $('#q').value.trim();
+  if (q) lookup(q);
+});
+
+async function lookup(q) {
+  const server = currentServer();
+  const params = new URLSearchParams({ q });
+  if (server !== 'default') params.set('server', server);
+  history.replaceState(null, '', '?' + params);
+
+  const card = el('div', { class: 'card' }, el('div', { class: 'loading' }, el('span', { class: 'spinner' }), `Looking up ${q}…`));
+  $('#results').prepend(card);
+  try {
+    const resp = await fetch('api/lookup?' + params);
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || resp.statusText);
+    card.replaceWith(render(data));
+  } catch (err) {
+    card.replaceChildren(el('div', { class: 'error' }, `${q}: ${err.message}`));
+  }
+}
+
+function linkify(text, command) {
+  // Make IPs and hostnames in results clickable for quick follow-up lookups.
+  const frag = document.createDocumentFragment();
+  text.split('\n').forEach((line, i) => {
+    if (i) frag.append('\n');
+    const t = line.trim();
+    if (command !== 'blacklist' && ipRe.test(t)) {
+      frag.append(el('a', { title: 'Reverse lookup', onclick: () => run(`ptr:${t}`) }, line));
+    } else if (hostRe.test(t)) {
+      frag.append(el('a', { title: 'A lookup', onclick: () => run(`a:${t}`) }, line));
+    } else frag.append(line);
+  });
+  return frag;
+}
+
+function run(q) { $('#q').value = q; lookup(q); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+function render(d) {
+  const card = el('div', { class: 'card' });
+  const counts = { pass: 0, warn: 0, fail: 0 };
+  d.checks.forEach(c => counts[c.status] !== undefined && counts[c.status]++);
+  const summary = [counts.fail && `${counts.fail} failed`, counts.warn && `${counts.warn} warning`].filter(Boolean).join(', ') || 'no problems';
+  card.append(el('div', { class: 'card-head' },
+    el('h2', {}, `${d.command}:${d.query}`),
+    el('div', { class: 'meta' },
+      `${summary} · ${d.server} · ${d.time_ms} ms `,
+      el('button', { class: 'close', title: 'Close', onclick: () => card.remove() }, '×'))));
+
+  if (d.error) card.append(el('div', { class: 'error' }, d.error));
+
+  if (d.headers && d.headers.length) {
+    if (d.rows.length) {
+      const statusCol = d.headers.indexOf('Status');
+      const table = el('table', {},
+        el('thead', {}, el('tr', {}, ...d.headers.map(h => el('th', {}, h)))),
+        el('tbody', {}, ...d.rows.map(row => el('tr', {}, ...row.map((cell, i) =>
+          el('td', i === statusCol ? { class: cell } : {}, linkify(cell, d.command)))))));
+      card.append(el('div', { class: 'table-wrap' }, table));
+    } else {
+      card.append(el('div', { class: 'empty' }, 'No records found.'));
+    }
+  }
+
+  if (d.checks.length) {
+    const order = { fail: 0, warn: 1, info: 2, pass: 3 };
+    const checks = [...d.checks].sort((a, b) => order[a.status] - order[b.status]);
+    card.append(el('div', { class: 'checks' }, el('h3', {}, 'Test results'),
+      ...checks.map(c => el('div', { class: 'check' },
+        el('span', { class: `badge ${c.status}` }, c.status),
+        el('span', {}, el('b', {}, c.name), ' — ', c.message)))));
+  }
+
+  if (d.response) {
+    card.append(el('details', {}, el('summary', {}, 'Raw DNS response'), el('pre', {}, d.response)));
+  }
+
+  const target = d.command === 'dkim' ? d.query.split('._domainkey.')[1] : d.query;
+  const next = ipRe.test(target) ? ['ptr', 'blacklist'].filter(c => c !== d.command) : (related[d.command] || []);
+  if (next.length && target) {
+    card.append(el('div', { class: 'foot' }, el('span', { class: 'meta' }, 'Related:'),
+      ...next.map(c => el('button', { type: 'button', class: 'chip', onclick: () => run(`${c}:${target}`) }, `${c}:${target}`))));
+  }
+  return card;
+}
+
+init();
+</script>
+</body>
+</html>
