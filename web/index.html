@@ -77,7 +77,7 @@ pre { margin: 0 16px 12px; padding: 12px; background: var(--bg); border-radius: 
   <div class="wrap">
     <h1>DNS <span>Dash</span></h1>
     <form id="form">
-      <input id="q" name="q" placeholder="mx:example.com" autocomplete="off" autofocus spellcheck="false">
+      <input id="q" name="q" placeholder="example.com" autocomplete="off" autofocus spellcheck="false">
       <select id="server" title="DNS resolver">
         <option value="default">Default resolver</option>
         <option value="1.1.1.1">Cloudflare 1.1.1.1</option>
@@ -89,7 +89,7 @@ pre { margin: 0 16px 12px; padding: 12px; background: var(--bg); border-radius: 
       <button type="submit">Lookup</button>
     </form>
     <div class="chips" id="chips"></div>
-    <div class="hint" id="hint">Type <code>command:target</code>, or pick a command above. A bare domain runs an MX lookup; a bare IP runs a reverse lookup.</div>
+    <div class="hint" id="hint">Type <code>command:target</code>, or pick a command above. A bare domain runs an A/CNAME lookup; a bare IP runs a reverse lookup.</div>
   </div>
 </header>
 <main><div class="wrap" id="results"></div></main>
@@ -114,16 +114,17 @@ const hostRe = /^(?=.{1,253}$)([a-z0-9_]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i;
 // Follow-up lookups offered after each result, like MxToolbox's suggestions.
 const related = {
   mx: ['spf', 'dmarc', 'blacklist', 'ns', 'dns'],
-  a: ['aaaa', 'mx', 'ns', 'dns'],
+  a: ['aaaa', 'mx', 'ns', 'rdap', 'dns'],
   aaaa: ['a', 'dns'],
-  ns: ['soa', 'dnssec', 'dns'],
+  ns: ['soa', 'dnssec', 'rdap', 'dns'],
   txt: ['spf', 'dmarc'],
   soa: ['ns', 'dnssec'],
   spf: ['dmarc', 'mx', 'txt'],
   dmarc: ['spf', 'mx'],
   blacklist: ['mx', 'spf'],
   dnssec: ['ns', 'soa'],
-  dns: ['mx', 'spf', 'dmarc', 'dnssec'],
+  dns: ['mx', 'spf', 'dmarc', 'dnssec', 'rdap'],
+  rdap: ['ns', 'dns', 'a'],
   cname: ['a', 'dns'],
   caa: ['dns'],
 };
@@ -248,7 +249,7 @@ function render(d) {
   }
 
   if (d.response) {
-    card.append(el('details', {}, el('summary', {}, 'Raw DNS response'), el('pre', {}, d.response)));
+    card.append(el('details', {}, el('summary', {}, d.command === 'rdap' ? 'Raw RDAP response' : 'Raw DNS response'), el('pre', {}, d.response)));
   }
 
   const target = d.command === 'dkim' ? d.query.split('._domainkey.')[1] : d.query;

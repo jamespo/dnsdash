@@ -1,6 +1,6 @@
 # DNS Dash
 
-A self-hosted web tool for DNS lookups and mail checks, modelled on
+A self-hosted web tool for DNS lookups, mail checks and RDAP domain registration lookups, modelled on
 [MxToolbox SuperTool](https://mxtoolbox.com/SuperTool.aspx). It is a single
 Go binary with the web page built in.
 
@@ -37,7 +37,7 @@ Examples:
 Type a lookup in the search box as `command:target` and press **Lookup**, or
 click a command button to fill the command in.
 
-- A bare domain (`example.com`) runs an MX lookup.
+- A bare domain (`example.com`) runs an A lookup, which also shows any CNAME chain.
 - A bare IP address (`8.8.8.8`) runs a reverse (PTR) lookup.
 - URLs are accepted and cleaned, so `https://example.com/path` becomes `example.com`.
 
@@ -46,7 +46,8 @@ Each lookup appears as a card at the top of the page, showing:
 - **A results table.** IPs and hostnames are links: clicking an IP runs a
   reverse lookup and clicking a hostname runs an A lookup.
 - **Test results**, marked `PASS`, `WARN`, `FAIL` or `INFO`, with failures listed first.
-- **Raw DNS response**, a dig-style dump of the DNS answer (click to expand).
+- **Raw response**, a dig-style dump of the DNS answer, or the RDAP JSON for
+  `rdap` lookups (click to expand).
 - **Related lookups**, such as SPF, DMARC and blacklist after an MX lookup.
 
 Use the dropdown to choose a resolver: the server default, Cloudflare, Google,
@@ -75,6 +76,7 @@ The address bar always holds the current lookup (for example
 | `blacklist` | `blacklist:1.2.3.4` | Checks an IPv4 address against 18 DNS blacklists. Given a domain, it checks the IPs of the domain's mail servers (or its A records if it has no MX), up to 4 IPs. |
 | `dnssec` | `dnssec:example.com` | DNSKEY and DS records, whether a DS key tag matches a DNSKEY, and whether the resolver validated the answer |
 | `dns` | `dns:example.com` | SOA, NS, A, AAAA, CNAME, MX, TXT and CAA records, all queried at once |
+| `rdap` | `rdap:example.com` | Registration data from the domain's registry over RDAP: registrar, abuse contact, registration, expiry and change dates, status codes, delegated name servers and DNSSEC. Flags an unregistered or expired domain, expiry within 30 days, and hold or pending-delete status. A subdomain is looked up as its registered domain. |
 
 ## HTTP API
 
@@ -124,6 +126,11 @@ resolvers are allowed.
 - **DMARC lookups don't fall back to the parent domain.** If a subdomain has
   no `_dmarc` record of its own, the lookup reports that, even if the parent
   domain has one.
+- **RDAP lookups go out over HTTPS, not DNS.** They ignore the chosen
+  resolver; DNS Dash needs outbound HTTPS to `data.iana.org` and the
+  registries' RDAP servers. A few ccTLDs have no RDAP server yet and report an
+  error. For thin registries such as `.com`, the registry's record is shown,
+  not the registrar's (so registrant details are usually absent).
 - **DNSSEC validation relies on the resolver.** It is reported from the
   resolver's AD flag; DNS Dash does not check signatures itself.
 - **Custom resolvers turn DNS Dash into a DNS relay.** With

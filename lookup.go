@@ -74,6 +74,7 @@ func init() {
 		{"blacklist", "Check an IP (or a domain's mail servers) against DNSBLs", "blacklist:1.2.3.4", cmdBlacklist},
 		{"dnssec", "DNSKEY / DS records and validation status", "dnssec:example.com", cmdDNSSEC},
 		{"dns", "All common record types at once", "dns:example.com", cmdAll},
+		{"rdap", "Domain registration data (registrar, dates, status) via RDAP", "rdap:example.com", cmdRDAP},
 	}
 	for i := range commands {
 		commandIndex[commands[i].Name] = &commands[i]
@@ -81,7 +82,7 @@ func init() {
 }
 
 // parseQuery splits "mx:example.com" into ("mx", "example.com"). Bare input
-// defaults to ptr for IPs and mx for names, like MxToolbox.
+// defaults to ptr for IPs and a (which also shows any CNAME chain) for names.
 func parseQuery(q string) (string, string) {
 	q = strings.TrimSpace(q)
 	if i := strings.Index(q, ":"); i > 0 {
@@ -92,7 +93,7 @@ func parseQuery(q string) (string, string) {
 	if net.ParseIP(q) != nil {
 		return "ptr", q
 	}
-	return "mx", q
+	return "a", q
 }
 
 // cleanDomain strips URL noise and validates a domain name.

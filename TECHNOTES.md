@@ -8,10 +8,11 @@
 | `resolver.go` | `Resolver`, a thin wrapper around `github.com/miekg/dns`, plus helpers to normalise and pick the resolver |
 | `lookup.go` | The `Result` and `Check` types, the command registry, query parsing, and the DNS record commands (`mx`, `ns`, `soa`, `ptr`, `dnssec`, `dns`, plus the generic record commands) |
 | `mail.go` | Email-related commands: `spf`, `dmarc`, `dkim`, `blacklist` |
+| `rdap.go` | The `rdap` command: IANA bootstrap lookup and RDAP domain queries over HTTPS |
 | `web/index.html` | The whole front end, as one HTML file with inline CSS and JavaScript and no build step |
 
 The only third-party dependency is `github.com/miekg/dns`. Everything else
-uses the standard library.
+uses the standard library (`net/http` for RDAP).
 
 ## Request flow
 
@@ -73,7 +74,7 @@ stub resolver that may hide DNSSEC details or the true answer flags.
 
 `parseQuery` treats the text before the first `:` as the command only when it
 is a known command name. Otherwise the whole input is the target: an IP runs
-`ptr` and anything else runs `mx`. Because of this, `ptr:2001:db8::1` and
+`ptr` and anything else runs `a` (which also lists any CNAME chain). Because of this, `ptr:2001:db8::1` and
 `dkim:selector:domain` work even though the target contains colons.
 
 `cleanDomain` lowercases the input, removes `http(s)://`, any path, query or
@@ -151,6 +152,29 @@ to run:
   reports the resolver's AD flag.
 - A DNSKEY with the SEP flag (257) is labelled KSK; anything else is labelled ZSK.
 
+### RDAP
+
+- **Finding the server.** `rdapServerFor` downloads IANA's bootstrap file
+  (`https://data.iana.org/rdap/dns.json`, RFC 9224), maps each TLD to its
+  first HTTPS base URL, and caches the map in memory for 24 hours. The
+  download happens under a mutex, so concurrent first lookups wait for one
+  fetch.
+- **Query.** `GET <base>domain/<name>` with `Accept: application/rdap+json`,
+  a 15s client timeout (inside the request's 30s context) and a 2 MiB body
+  limit. The resolver isn't used; `Result.Server` is set to the RDAP base URL.
+- **Subdomains.** Without the Public Suffix List the registered domain isn't
+  known, so on a 404 the lookup drops the leftmost label and retries, stopping
+  at two labels. `www.example.co.uk` tries `www.example.co.uk`, then
+  `example.co.uk`, then `co.uk`.
+- **Parsing.** Only the fields shown are decoded (`ldhName`, `status`,
+  `events`, `entities`, `nameservers`, `secureDNS`). Entity names and the
+  registrar's abuse email/phone come from the jCard (`vcardArray`) `fn`,
+  `email` and `tel` properties. The raw JSON, indented, goes in
+  `Result.Response`.
+- **Not followed.** Registry responses for thin registries (`.com`, `.net`)
+  link to the registrar's own RDAP server (`links` with `rel: related`); that
+  second lookup isn't made.
+
 ### Formatting
 
 - `rdata()` gets the record data by removing the header text from `rr.String()`.
@@ -186,6 +210,8 @@ to run:
   - a 30s limit on each request;
   - a cap of 16 concurrent blacklist queries and at most 4 IPs per
     blacklist lookup.
+- **RDAP fetches** only go to the HTTPS URLs listed in IANA's bootstrap file
+  (and wherever those servers redirect), never to a user-supplied host.
 - **Limits that don't exist:** there is no rate limiting or authentication.
   Put DNS Dash behind a reverse proxy if those are needed.
 - **Server timeouts.** Only `ReadHeaderTimeout` is set (10s). Write timeouts
