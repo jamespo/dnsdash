@@ -92,7 +92,7 @@ to run:
   because the server is authoritative).
 - `dns` sends all 8 record-type queries at once.
 - `blacklist` runs (IPs × lists) queries through a semaphore that allows 16 at
-  a time. With 4 IPs and 18 lists that is at most 72 queries.
+  a time. With 4 IPs and 14 lists that is at most 56 queries.
 
 ### SPF
 

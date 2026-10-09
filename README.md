@@ -73,7 +73,7 @@ The address bar always holds the current lookup (for example
 | `spf` | `spf:example.com` | The SPF record broken into its parts. Counts DNS lookups against the limit of 10, following `include:` and `redirect=`. Flags more than one SPF record, `+all` or `?all`, the deprecated `ptr` mechanism, and unknown terms. |
 | `dmarc` | `dmarc:example.com` | The record at `_dmarc.<domain>`, with each tag explained. Checks the policy, `pct`, `rua` reporting, and that `v=DMARC1` comes first. |
 | `dkim` | `dkim:selector:example.com` | The key at `<selector>._domainkey.<domain>`. Checks the key and its RSA length, and flags revoked keys (empty `p=`) and testing mode (`t=y`). |
-| `blacklist` | `blacklist:1.2.3.4` | Checks an IPv4 address against 18 DNS blacklists. Given a domain, it checks the IPs of the domain's mail servers (or its A records if it has no MX), up to 4 IPs. |
+| `blacklist` | `blacklist:1.2.3.4` | Checks an IPv4 address against 14 DNS blacklists. Given a domain, it checks the IPs of the domain's mail servers (or its A records if it has no MX), up to 4 IPs. |
 | `dnssec` | `dnssec:example.com` | DNSKEY and DS records, whether a DS key tag matches a DNSKEY, and whether the resolver validated the answer |
 | `dns` | `dns:example.com` | SOA, NS, A, AAAA, CNAME, MX, TXT and CAA records, all queried at once |
 | `rdap` | `rdap:example.com` | Registration data from the domain's registry over RDAP: registrar, abuse contact, registration, expiry and change dates, status codes, delegated name servers and DNSSEC. Flags an unregistered or expired domain, expiry within 30 days, and hold or pending-delete status. A subdomain is looked up as its registered domain. |
