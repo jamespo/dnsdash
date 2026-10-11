@@ -4,6 +4,8 @@ A self-hosted web tool for DNS lookups, mail checks and RDAP domain registration
 [MxToolbox SuperTool](https://mxtoolbox.com/SuperTool.aspx). It is a single
 Go binary with the web page built in.
 
+![DNS Dash showing an A lookup for reddit.com](docs/dnsdash.png)
+
 ## Quick start
 
 ```sh
@@ -30,6 +32,28 @@ Examples:
 ./dnsdash -addr 127.0.0.1:9000
 ./dnsdash -resolver 9.9.9.9 -allow-custom-resolver=false
 ./dnsdash -resolver '[2606:4700:4700::1111]:53'
+```
+
+## Running as a service
+
+[`contrib/dnsdash.service`](contrib/dnsdash.service) is a systemd unit that
+runs `/usr/bin/dnsdash` (where the deb, rpm and apk packages install it) as a
+randomly allocated user (`DynamicUser=yes`), with a read-only filesystem, no
+capabilities and a restricted set of system calls.
+
+```sh
+sudo cp contrib/dnsdash.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now dnsdash
+```
+
+To pass different options, run `sudo systemctl edit dnsdash` and override
+`ExecStart`:
+
+```ini
+[Service]
+ExecStart=
+ExecStart=/usr/bin/dnsdash -addr 127.0.0.1:9000 -allow-custom-resolver=false
 ```
 
 ## Using the web page
