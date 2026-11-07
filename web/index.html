@@ -31,6 +31,8 @@ input, select, button { font: inherit; padding: 9px 12px; border: 1px solid var(
 #q { flex: 1 1 320px; font-family: var(--mono); }
 button { background: var(--accent); color: var(--accent-text); border-color: var(--accent); cursor: pointer; font-weight: 600; }
 button.secondary { background: transparent; color: var(--accent); }
+.toggle { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); cursor: pointer; font-family: var(--mono); }
+.toggle input { margin: 0; padding: 0; }
 #custom { width: 170px; font-family: var(--mono); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .chip { font-size: 13px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; font-weight: 500; }
@@ -86,6 +88,7 @@ pre { margin: 0 16px 12px; padding: 12px; background: var(--bg); border-radius: 
         <option value="custom">Custom…</option>
       </select>
       <input id="custom" placeholder="ip[:port]" hidden>
+      <label class="toggle" title="Show the raw DNS response as an iterative trace from the root servers, like dig +trace"><input type="checkbox" id="trace"> +trace</label>
       <button type="submit">Lookup</button>
     </form>
     <div class="chips" id="chips"></div>
@@ -142,6 +145,7 @@ async function init() {
   }
   const params = new URLSearchParams(location.search);
   if (params.get('server')) setServer(params.get('server'));
+  $('#trace').checked = params.get('trace') === '1';
   if (params.get('q')) { $('#q').value = params.get('q'); lookup(params.get('q')); }
 }
 
@@ -182,6 +186,7 @@ async function lookup(q) {
   const server = currentServer();
   const params = new URLSearchParams({ q });
   if (server !== 'default') params.set('server', server);
+  if ($('#trace').checked) params.set('trace', '1');
   history.replaceState(null, '', '?' + params);
 
   const card = el('div', { class: 'card' }, el('div', { class: 'loading' }, el('span', { class: 'spinner' }), `Looking up ${q}…`));
@@ -249,7 +254,7 @@ function render(d) {
   }
 
   if (d.response) {
-    card.append(el('details', {}, el('summary', {}, d.command === 'rdap' ? 'Raw RDAP response' : 'Raw DNS response'), el('pre', {}, d.response)));
+    card.append(el('details', {}, el('summary', {}, d.command === 'rdap' ? 'Raw RDAP response' : d.traced ? 'Raw DNS response (+trace)' : 'Raw DNS response'), el('pre', {}, d.response)));
   }
 
   const target = d.command === 'dkim' ? d.query.split('._domainkey.')[1] : d.query;

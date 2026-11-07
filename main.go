@@ -71,7 +71,7 @@ func (s *server) handleLookup(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
 	res := &Resolver{Server: server, Timeout: s.timeout}
-	writeJSON(w, http.StatusOK, Run(ctx, res, q))
+	writeJSON(w, http.StatusOK, Run(ctx, res, q, r.URL.Query().Get("trace") == "1"))
 }
 
 func (s *server) handleCommands(w http.ResponseWriter, _ *http.Request) {

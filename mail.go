@@ -241,7 +241,7 @@ func cmdDMARC(ctx context.Context, res *Resolver, arg string, out *Result) error
 		return err
 	}
 	if qr != nil {
-		out.Response = qr.Msg.String()
+		out.setResponse(qr)
 	}
 	var recs []string
 	for _, t := range txts {
@@ -331,7 +331,7 @@ func cmdDKIM(ctx context.Context, res *Resolver, arg string, out *Result) error 
 		return err
 	}
 	if qr != nil {
-		out.Response = qr.Msg.String()
+		out.setResponse(qr)
 	}
 	out.Headers = []string{"Tag", "Value", "Description"}
 	if len(txts) == 0 {

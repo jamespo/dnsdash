@@ -71,7 +71,8 @@ Each lookup appears as a card at the top of the page, showing:
   reverse lookup and clicking a hostname runs an A lookup.
 - **Test results**, marked `PASS`, `WARN`, `FAIL` or `INFO`, with failures listed first.
 - **Raw response**, a dig-style dump of the DNS answer, or the RDAP JSON for
-  `rdap` lookups (click to expand).
+  `rdap` lookups (click to expand). Tick **+trace** to replace the DNS answer
+  with an iterative trace from the root servers, like `dig +trace`.
 - **Related lookups**, such as SPF, DMARC and blacklist after an MX lookup.
 
 Use the dropdown to choose a resolver: the server default, Cloudflare, Google,
@@ -110,6 +111,7 @@ The address bar always holds the current lookup (for example
 |---|---|---|
 | `q` | yes | The lookup, in the same format as the search box (at most 300 characters) |
 | `server` | no | Resolver as `ip` or `ip:port`; leave it out or pass `default` to use the server default |
+| `trace` | no | `1` to make `response` an iterative trace from the root servers (like `dig +trace`); `traced` is then `true` |
 
 ```sh
 curl 'http://localhost:8080/api/lookup?q=mx:gmail.com&server=1.1.1.1'

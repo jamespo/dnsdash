@@ -38,6 +38,17 @@ type Result struct {
 	Checks   []Check    `json:"checks"`
 	Error    string     `json:"error,omitempty"`
 	Response string     `json:"response,omitempty"` // dig-style raw output
+	Traced   bool       `json:"traced,omitempty"`   // Response is an iterative trace from the root
+
+	question *dns.Question // the query behind Response, used for tracing
+}
+
+// setResponse records qr as the raw response shown to the user.
+func (r *Result) setResponse(qr *QueryResult) {
+	r.Response = qr.Msg.String()
+	if len(qr.Msg.Question) > 0 {
+		r.question = &qr.Msg.Question[0]
+	}
 }
 
 func (r *Result) check(status, name, format string, args ...any) {
@@ -114,12 +125,17 @@ func cleanDomain(s string) (string, error) {
 	return s, nil
 }
 
-// Run executes a query string against the resolver.
-func Run(ctx context.Context, res *Resolver, q string) *Result {
+// Run executes a query string against the resolver. With trace set, the raw
+// DNS response is replaced by an iterative trace from the root servers.
+func Run(ctx context.Context, res *Resolver, q string, trace bool) *Result {
 	name, arg := parseQuery(q)
 	out := &Result{Command: name, Query: arg, Server: res.Server}
 	start := time.Now()
 	err := commandIndex[name].Handler(ctx, res, arg, out)
+	if trace && out.question != nil {
+		out.Response = res.Trace(ctx, out.question.Name, out.question.Qtype)
+		out.Traced = true
+	}
 	out.TimeMS = time.Since(start).Milliseconds()
 	if err != nil {
 		out.Error = err.Error()
@@ -164,7 +180,7 @@ func rcodeCheck(out *Result, qr *QueryResult, what string) bool {
 	if qr == nil {
 		return false
 	}
-	out.Response = qr.Msg.String()
+	out.setResponse(qr)
 	if qr.Msg.Rcode == dns.RcodeNameError {
 		out.check(StatusFail, "Domain exists", "%s does not exist (NXDOMAIN)", what)
 		return false
@@ -399,7 +415,7 @@ func cmdPTR(ctx context.Context, res *Resolver, arg string, out *Result) error {
 	if err != nil {
 		return err
 	}
-	out.Response = qr.Msg.String()
+	out.setResponse(qr)
 	out.Headers = []string{"IP Address", "Hostname", "Forward Confirmed", "TTL"}
 	if len(rrs) == 0 {
 		out.check(StatusFail, "PTR record", "No reverse DNS (PTR) record for %s", ip)
